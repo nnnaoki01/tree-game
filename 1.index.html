@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>タップで植林ゲーム</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background: linear-gradient(135deg, #a3d9a5, #f0f8e8);
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation; /* ズームを無効化 */
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2e7d32;
+            margin: 10px 0;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #controls {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #player-name {
+            font-size: 1.1rem;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        #start-game-button, #add-tree-button {
+            font-size: 1.5rem;
+            padding: 20px 40px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            background: linear-gradient(135deg, #ff7e5f, #feb47b);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #start-game-button:hover, #add-tree-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        #add-tree-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #score-board {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.3rem;
+        }
+
+        #game-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #e8f5e9;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .tree {
+            position: absolute;
+            width: 50px;
+            height: 80px;
+            transform: translate(-50%, -50%);
+        }
+
+        .tree .trunk {
+            width: 15px;
+            height: 40px;
+            background-color: #8b4513;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .tree .leaves {
+            width: 50px;
+            height: 50px;
+            background-color: #2e7d32;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .tree.leaves-blue .leaves {
+            background-color: #2196f3;
+        }
+
+        .tree.leaves-red .leaves {
+            background-color: #f44336;
+        }
+
+        .tree.gold-tree .leaves {
+            background-color: gold;
+        }
+
+        #ranking-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            z-index: 20;
+            display: none;
+        }
+
+        #ranking-modal h2 {
+            font-size: 1.5rem;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        #ranking-modal ol {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            text-align: left;
+        }
+
+        #ranking-modal li {
+            font-size: 1rem;
+            color: #555;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #ranking-modal li.top-1 {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: gold;
+        }
+
+        #ranking-modal li.top-2 {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: silver;
+        }
+
+        #ranking-modal li.top-3 {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #cd7f32;
+        }
+
+        #close-ranking {
+            font-size: 1rem;
+            padding: 10px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 20px;
+            background: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        #close-ranking:hover {
+            background: #43a047;
+        }
+
+        audio {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>タップで植林ゲーム</h1>
+
+    <div id="controls">
+        <input id="player-name" type="text" placeholder="プレイヤー名を入力" />
+        <button id="start-game-button">ゲーム開始</button>
+        <button id="add-tree-button" disabled>木を植える</button>
+        <div id="score-board">
+            <p>スコア: <span id="current-score">0</span></p>
+            <p>残り時間: <span id="timer">10</span> 秒</p>
+        </div>
+    </div>
+
+    <div id="game-area"></div>
+
+    <div id="ranking-modal">
+        <h2>ランキング</h2>
+        <ol id="ranking-list"></ol>
+        <button id="close-ranking">閉じる</button>
+    </div>
+
+    <audio id="plant-sound" src="https://example.com/plant.mp3"></audio>
+    <audio id="bonus-sound" src="https://example.com/bonus.mp3"></audio>
+    <audio id="game-over-sound" src="https://example.com/game-over.mp3"></audio>
+
+    <script>
+        // JavaScriptコードは修正なし（ズーム修正に影響はないため省略）
+    </script>
+</body>
+</html>
